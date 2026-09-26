@@ -86,7 +86,7 @@ Minimal, in the profile's `cordis.patch.yml`:
 - id: pocket-pair
   config:
     pairBase: 'https://harness.example.com'
-    lanPort: 8124
+    lanPort: 8081
 ```
 
 Full key list:
