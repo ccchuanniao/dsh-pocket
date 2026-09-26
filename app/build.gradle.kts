@@ -70,8 +70,8 @@ android {
         field("FIREBASE_API_KEY", injected("firebaseApiKey"))
         field("FIREBASE_SENDER_ID", injected("firebaseSenderId"))
         field("NOTIFY_TOPIC", injected("notifyTopic"))
-        versionCode = 38
-        versionName = "1.0.37"
+        versionCode = 39
+        versionName = "1.0.38"
     }
 
     signingConfigs {
