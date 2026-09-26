@@ -46,6 +46,27 @@ cp dsh-pocket.properties.example dsh-pocket.properties   # optional; see Configu
 The APK lands in `app/build/outputs/apk/release/`. Without `keystore.properties` the build produces
 an unsigned package; see [Signing](#signing).
 
+## Compatibility
+
+| | Version |
+| --- | --- |
+| Android | **8.0 (API 26) or newer.** `minSdk = 26` |
+| Compile / target SDK | API 36 |
+| JDK | 21 |
+| Gradle | 8.14.3 (wrapper) |
+| Android Gradle Plugin | 8.13.2 |
+| Kotlin | 2.2.21 |
+| Host side | The `dsh-pocket-pair` harness plugin, on DeepSeek Harness `0.1.x` |
+
+The app is only half of the system. It needs the **`dsh-pocket-pair`** plugin running on a harness
+host to pair with: that plugin mints the pairing code, admits the device through a gate that supports
+per-device revocation, and serves the APK the QR link points at. This repository does not contain it.
+
+The app talks to the harness only through its web console and the plugin's gate, so it does not care
+which harness version runs underneath beyond what the plugin itself requires. That requirement —
+and the fact that the plugin reads harness internals rather than a frozen API — is documented in the
+plugin's own README.
+
 ## Configuration
 
 Everything that differs between deployments lives in `dsh-pocket.properties`, which is gitignored.
