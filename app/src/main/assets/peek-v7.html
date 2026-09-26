@@ -135,6 +135,17 @@ if(still.complete&&still.naturalWidth)initialize();else still.addEventListener('
 
 // Exit on the console's cue. Appended last on purpose: inserting it earlier split an existing
 // statement and silently stopped the rest of this script from running.
+// 给宿主用的一句文案。原本气泡只会说"加载中… 目前 X%"，而插件页面上要显示的是
+// "正在生成安装包"这类没有百分比的等待原因 —— 让调用方直接把话说出来，比在这里
+// 编一个假的百分比诚实。
+window.splashSay=function(text){
+  // 算"宿主接管了"，把自带的演示进度关掉 —— 否则它会在 1.2 秒后自己跑起来，
+  // 一边把百分比往上加、一边把我们这句话覆盖成"加载中… 目前 X%"。
+  hosted=true;
+  var el=document.getElementById('bubbleText'); if(el) el.textContent=text;
+  var b=document.getElementById('bubble'); if(b) b.classList.remove('hidden');
+};
+
 window.splashLeave=function(){if(leaving)return;leaving=true;
   document.documentElement.classList.add('leaving');
   var t0=performance.now(),ms=250;
