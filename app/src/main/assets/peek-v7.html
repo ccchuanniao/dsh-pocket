@@ -128,6 +128,19 @@ canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();cancel
 canvas.addEventListener('webglcontextrestored',()=>location.reload());
 // Deterministic capture hook has no effect during normal playback.
 window.peekCapture=(t,only=-1)=>{cancelAnimationFrame(frame);draw(t,only);};
+// 退场动画的真正实现。它必须待在这个 try 块里：`leaving`、`leave` 和 `draw` 都是
+// 本块的绑定，块外看不见。之前它写在文件末尾的 window.splashLeave 里，宿主一调就抛
+// "leaving is not defined"，退场动画整个不跑 —— 而且是静默的：宿主照样会在
+// SPLASH_EXIT_MS 之后把覆盖层直接摘掉，看起来只是"没有动画"。存成闭包交给宿主调用。
+window.__splashExit=function(){if(leaving)return;leaving=true;
+  document.documentElement.classList.add('leaving');
+  var t0=performance.now(),ms=250;
+  cancelAnimationFrame(frame);
+  function step(now){var k=Math.min(1,(now-t0)/ms);leave=1-k*k;
+    draw((now-start)/1000);
+    if(k<1)frame=requestAnimationFrame(step);}
+  frame=requestAnimationFrame(step);
+};
 ready=true;canvas.dataset.ready='true';resume();
 }catch(error){console.error(error);canvas.style.visibility='hidden';still.style.visibility='visible';}
 }
@@ -146,14 +159,13 @@ window.splashSay=function(text){
   var b=document.getElementById('bubble'); if(b) b.classList.remove('hidden');
 };
 
-window.splashLeave=function(){if(leaving)return;leaving=true;
+// 宿主调用的入口。实现在 initialize() 里面（window.__splashExit），
+// 因为退场要用到的绑定都在那个作用域里，这里读不到。
+window.splashLeave=function(){
+  if(typeof window.__splashExit==='function'){window.__splashExit();return;}
+  // WebGL 起不来时角色本来就没在动，至少把白底去掉，
+  // 别让宿主在 SPLASH_EXIT_MS 之后把整块覆盖层硬切走。
   document.documentElement.classList.add('leaving');
-  var t0=performance.now(),ms=250;
-  cancelAnimationFrame(frame);
-  function step(now){var k=Math.min(1,(now-t0)/ms);leave=1-k*k;
-    draw((now-start)/1000);
-    if(k<1)frame=requestAnimationFrame(step);}
-  frame=requestAnimationFrame(step);
 };
 
 // 第三个参数为真时同时触发点击效果。走这个入口是因为它已被证明能从宿主执行到
