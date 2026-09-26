@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        Android 11 and later hide other packages from an app unless it asks for them, and
+        resolveActivity() reports null for a hidden one. Without this the gallery intent looked
+        unresolvable on a device that has a gallery, and every image request fell back to the
+        document picker.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.provider.action.PICK_IMAGES" />
+            <data android:mimeType="image/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.GET_CONTENT" />
+            <data android:mimeType="image/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.PICK" />
+            <data android:mimeType="image/*" />
+        </intent>
+    </queries>
+
+    <!--
+        `allowBackup="false"` is deliberate. This app holds a harness password and the device token
+        that grants access to the console. Android's automatic backup uploads app data — including
+        SharedPreferences — to the user's cloud account and restores it onto a new device, which is the
+        wrong place for either. Re-pairing after a restore costs one QR scan, so nothing is lost.
+    -->
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:theme="@style/Theme.DshPocket"
+        android:allowBackup="false"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!--
+                The pairing QR code is an https link to the APK download, with the harness address
+                and the pairing code in its fragment. A phone without the app opens it in a browser
+                and downloads; with the app installed, this verified filter hands the same link to us instead,
+                which is what makes one scan install and pair in one step. Verification reads
+                https://<appLinkHost>/.well-known/assetlinks.json, which pins this package
+                name to this signing certificate.
+
+                The host is the download host, not the harness host: the harness address is whatever
+                the owner paired with and cannot be known here.
+
+                `${appLinkHost}` has no default that works for anyone: each deployment serves its own
+                assetlinks.json. Set it in dsh-pocket.properties (see the example file). Built with the
+                placeholder, this filter simply never verifies and links open in the browser, which is
+                the same behaviour as having no app installed.
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="${appLinkHost}"
+                    android:pathPrefix="/apk/" />
+            </intent-filter>
+            <!-- A scheme of our own, for testing a pairing link without a browser in the way. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="dshpocket" android:host="pair" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            Firebase 收到推送时的入口。只有"构建时注入了 Firebase 配置"的包会注册到 Firebase，
+            所以没有配置的包里这段是死代码。
+        -->
+        <service
+            android:name=".PushService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- 应用在后台时，带 notification 负载的消息由系统直接显示，用它指定的渠道。 -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="dsh-tasks" />
+    </application>
+</manifest>

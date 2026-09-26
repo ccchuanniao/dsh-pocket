@@ -1,0 +1,51 @@
+# Values that differ per deployment. Copy this file to `dsh-pocket.properties` and fill in your own.
+#
+# `dsh-pocket.properties` is gitignored, so nothing here reaches the repository. Every key is
+# optional: leave one out and the build falls back to a neutral default that keeps the app
+# buildable, just without that feature.
+
+# ---------------------------------------------------------------------------
+# applicationId — the app's identity on the device
+# ---------------------------------------------------------------------------
+# This is also the identity a Firebase Android app is registered under. If you already have a
+# published build or a working FCM setup, keep using the same value here: changing it produces an
+# app that installs alongside the old one and receives no push.
+#
+# Default when absent: app.dshpocket
+# applicationId=com.example.dshpocket
+
+# ---------------------------------------------------------------------------
+# appLinkHost — the host that App Links verification runs against
+# ---------------------------------------------------------------------------
+# The pairing QR code is an https link to your APK download with the pairing code in the fragment.
+# With this set to a host you control, Android verifies it against
+# https://<appLinkHost>/.well-known/assetlinks.json and hands the link to the app instead of the
+# browser, which is what makes one scan install and pair.
+#
+# That file must list this app's applicationId and the SHA-256 fingerprint of the certificate it is
+# signed with. See the README for how to produce it.
+#
+# Default when absent: harness.example.com (a placeholder that never verifies)
+# appLinkHost=harness.example.com
+
+# ---------------------------------------------------------------------------
+# Firebase client configuration — optional, enables push notifications
+# ---------------------------------------------------------------------------
+# These four are client values that ship inside every Firebase Android app; they are not secrets.
+# The actual secret is the service account JSON, which stays on the harness host and never enters
+# this project. Leave all four empty to build without push.
+#
+# firebaseProjectId=your-project-id
+# firebaseAppId=1:000000000000:android:0000000000000000000000
+# firebaseApiKey=AIza...
+# firebaseSenderId=000000000000
+
+# ---------------------------------------------------------------------------
+# Baked-in pairing — optional
+# ---------------------------------------------------------------------------
+# Set these and a freshly installed app pairs itself with nothing to type or scan. `pairKey` is a
+# single-use enrollment code; the harness spends it on first redemption, so a publicly downloadable
+# APK cannot be reused by a second person.
+#
+# pairBase=https://harness.example.com
+# pairKey=abcdefgh

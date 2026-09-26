@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The edge colour of the launcher artwork, so that any part of the adaptive layer a launcher
+      does not cover blends with the artwork instead of showing a seam.
+    -->
+    <color name="ic_launcher_background">#F2F7FD</color>
+</resources>

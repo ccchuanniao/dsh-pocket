@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>角落探头</title>
+<style>
+  html,body{height:100%;margin:0;overflow:hidden;background:#fff}
+  /* 贴着左下角；超出屏幕的部分被裁掉，所以像从角落里钻出来 */
+  .corner{position:fixed;left:0;bottom:0;width:200px;transform-origin:bottom left;
+    animation:peek 5.2s cubic-bezier(.34,.02,.28,1) infinite}
+  .sway{animation:sway 2.4s ease-in-out infinite;transform-origin:bottom center}
+  .mark img{width:100%;height:auto;display:block}
+  /* 沿对角线从角落升起，而不是从正下方 */
+  @keyframes peek{
+    0%,8%   {transform:translate(-52%,92%)}
+    26%,68% {transform:translate(0,0)}
+    88%,100%{transform:translate(-52%,92%)}
+  }
+  @keyframes sway{0%,100%{transform:rotate(-1.8deg)}50%{transform:rotate(1.8deg)}}
+  @media (prefers-reduced-motion:reduce){.corner{animation:none;transform:none}.sway{animation:none}}
+</style></head>
+<body><div class="corner"><div class="sway"><div class="mark">
+  <img src="peek-cutout.png" alt="">
+</div></div></div></body></html>

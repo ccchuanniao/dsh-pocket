@@ -1,0 +1,27 @@
+# Build output
+build/
+app/build/
+.gradle/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local machine configuration (Android SDK path)
+local.properties
+
+# Signing material — never commit these.
+# An exposed keystore lets anyone publish updates that devices accept as yours.
+keystore.properties
+*.keystore
+*.jks
+.signing/
+
+# Per-deployment values. See dsh-pocket.properties.example.
+dsh-pocket.properties
+
+# Editors and OS
+.idea/
+*.iml
+.DS_Store
+Thumbs.db

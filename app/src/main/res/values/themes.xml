@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The harness supplies its own chrome, so the window keeps no action bar. -->
+    <style name="Theme.DshPocket" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- The system paints this before the activity draws. It was dark, which read as a broken
+             launch and clashed with the white splash the activity then shows. -->
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowSplashScreenBackground">@android:color/white</item>
+    </style>
+</resources>
