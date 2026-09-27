@@ -4,7 +4,8 @@ An Android shell for a [DeepSeek Harness](https://github.com/deepseek-ai/deepsee
 it shows the harness console full-screen, keeps you signed in, and can push a notification when a
 task finishes so you do not have to sit in front of the machine.
 
-It is the phone half of a pair. The host half is the **`dsh-pocket-pair`** harness plugin, which
+It is the phone half of a pair. The host half is the
+[**`dsh-pocket-pair`**](https://github.com/ccchuanniao/dsh-pocket-pair) harness plugin, which
 mints a one-time pairing code, admits the device through a gate that supports per-device
 revocation, and serves the APK you are about to install.
 
