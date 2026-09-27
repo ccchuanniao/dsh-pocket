@@ -116,6 +116,12 @@ class MainActivity : AppCompatActivity() {
     /** Whether the enrollment dialog is already up, so a second challenge does not stack another. */
     private var enrollmentVisible = false
 
+    /** Whether the key baked into this build has already been spent as a fallback this launch. */
+    private var bakedKeyAttempted = false
+
+    /** True while that fallback is in flight, so a code dialog does not compete with it. */
+    private var recoveringIdentity = false
+
     /**
      * The origin this installation was paired against, or null before the first pairing.
      *
@@ -131,6 +137,27 @@ class MainActivity : AppCompatActivity() {
         if (consecutiveLoadFailures < MAX_CONSECUTIVE_LOAD_FAILURES) return
         consecutiveLoadFailures = 0
         identityRejected = true
+    }
+
+    /**
+     * Registers this device with the key baked into this build. Once per launch.
+     *
+     * @return true when an attempt was started. False means there is nothing to try, and the
+     * caller falls back to asking for a code.
+     */
+    private fun recoverWithBakedKey(): Boolean {
+        if (bakedKeyAttempted) return false
+        bakedKeyAttempted = true
+        if (BuildConfig.PAIR_BASE.isEmpty() || BuildConfig.PAIR_KEY.isEmpty()) return false
+        // The stored pair is about to be replaced, so drop it: leaving it behind would let the
+        // next launch load the dead one again before ever reaching this path.
+        PairingPrefs.clear(this)
+        StoredCredentials.clear(this)
+        identityRejected = false
+        consecutiveLoadFailures = 0
+        recoveringIdentity = true
+        enrollSilently(BuildConfig.PAIR_BASE, BuildConfig.PAIR_KEY, BuildConfig.PAIR_BASE.startsWith("http://"))
+        return true
     }
 
     /**
@@ -572,15 +599,22 @@ class MainActivity : AppCompatActivity() {
                         pairingBase = base
                         identityRejected = false
                         consecutiveLoadFailures = 0
+                        recoveringIdentity = false
+                        // The fallback worked. A later revocation should be able to use it again
+                        // rather than being refused because it was already tried once.
+                        bakedKeyAttempted = false
                         adoptDeviceToken(base, outcome.token.orEmpty())
                         console.loadUrl(base)
                         startPush(base, outcome.token.orEmpty())
                     }
-                    is Pairing.Result.Refused -> AlertDialog.Builder(this)
-                        .setTitle(R.string.pair_failed_title)
-                        .setMessage(getString(R.string.pair_silent_failed, base, outcome.message))
-                        .setPositiveButton(android.R.string.ok) { _, _ -> showPairingSetup() }
-                        .show()
+                    is Pairing.Result.Refused -> {
+                        recoveringIdentity = false
+                        AlertDialog.Builder(this)
+                            .setTitle(R.string.pair_failed_title)
+                            .setMessage(getString(R.string.pair_silent_failed, base, outcome.message))
+                            .setPositiveButton(android.R.string.ok) { _, _ -> showPairingSetup() }
+                            .show()
+                    }
                 }
             }
         }.start()
@@ -721,9 +755,18 @@ class MainActivity : AppCompatActivity() {
             }
             com.google.firebase.messaging.FirebaseMessaging.getInstance().token
                 .addOnCompleteListener { task ->
-                    val token = task.result
-                    if (!task.isSuccessful || token.isNullOrEmpty()) {
+                    // Read `isSuccessful` before touching `result`. Reading `result` on a failed task
+                    // throws, so the old order — result first, flag second — threw on the main thread
+                    // and took the whole app down whenever a token could not be fetched: a wrong
+                    // Firebase configuration, no Google services, no network. The owner sees a crash
+                    // on launch and cannot tell it apart from "cannot connect".
+                    if (!task.isSuccessful) {
                         Log.w(TAG, "push: 取令牌失败", task.exception)
+                        return@addOnCompleteListener
+                    }
+                    val token = task.result
+                    if (token.isNullOrEmpty()) {
+                        Log.w(TAG, "push: 取到空令牌")
                         return@addOnCompleteListener
                     }
                     PushRegistration.stash(this, token)
@@ -766,6 +809,18 @@ class MainActivity : AppCompatActivity() {
         } else {
             askForPairingCode(base, null, PairingPrefs.load(this)?.lanMode ?: false)
         }
+    }
+
+    /**
+     * Shows the code dialog, unless the baked-key fallback is already running.
+     *
+     * That fallback re-registers this device by itself. A dialog raised over it would ask the owner
+     * to go and find a code on a computer while the app is busy using the one from the package they
+     * just installed.
+     */
+    private fun offerEnrollment() {
+        if (recoveringIdentity) return
+        showEnrollment()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -857,7 +912,7 @@ class MainActivity : AppCompatActivity() {
                 // repeat the refusal. The enrollment screen is shown because it is the only thing
                 // on screen that can lead anywhere.
                 handler.cancel()
-                showEnrollment()
+                offerEnrollment()
             }
 
             // The harness picks its theme in its own script, so the colour only becomes readable
@@ -871,7 +926,7 @@ class MainActivity : AppCompatActivity() {
                 noteLoadFailed()
                 // A page that cannot be reached at all is also a dead end without this: the dialog
                 // is the only thing on screen that can lead anywhere.
-                showEnrollment()
+                offerEnrollment()
             }
 
             /**
@@ -888,10 +943,19 @@ class MainActivity : AppCompatActivity() {
             ) {
                 if (!request.isForMainFrame || response.statusCode != 401) return
                 noteLoadFailed()
-                // A refusal always offers a way forward. Chromium does not reliably raise an auth
-                // challenge for one, so waiting for that callback left the owner looking at an error
-                // page with nothing to press. The registration screen is shown from here instead.
-                showEnrollment()
+                // A 401 while this install already holds a pair means that pair was refused — the
+                // device was revoked, or this build points at a different harness.
+                //
+                // Before asking the owner to go and find a code on a computer, register again with
+                // the key baked into the package this app was installed from: that is exactly what
+                // it is for, and re-installing a downloaded package is the likeliest reason this
+                // install is here at all. Without this an install landing on top of an older one
+                // keeps its stored pair, never reaches the baked key, and dead-ends on a dialog.
+                if (recoverWithBakedKey()) return
+                // Nothing baked to try. A refusal still offers a way forward: Chromium does not
+                // reliably raise an auth challenge for one, so waiting for that callback left the
+                // owner looking at an error page with nothing to press.
+                offerEnrollment()
             }
 
             override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {

@@ -43,6 +43,17 @@ internal data class PairingPrefs(val base: String, val lanMode: Boolean, val dev
         }
 
         /**
+         * Forgets where this installation was paired.
+         *
+         * Called when the stored pair is refused and the app falls back to the key baked into this
+         * build. Leaving the dead pair behind would make the next launch load it again — and fail
+         * on it again — before that fallback is ever reached.
+         */
+        fun clear(context: Context) {
+            context.getSharedPreferences(STORE, Context.MODE_PRIVATE).edit().clear().apply()
+        }
+
+        /**
          * Turns typed or scanned text into an origin, or null when no origin can be read from it.
          *
          * Accepts a bare host, a host and port, or a full URL, because the owner reads these off a
